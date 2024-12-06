@@ -1,0 +1,645 @@
+{
+  "name": "Daily Chargebee Invoices Sync to HubSpot",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "6b27d626-c6db-4136-bd7a-f857e02310d5",
+              "leftValue": "={{ $json.list }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1dda56a2-83b9-4559-897b-51a7ab13177e",
+      "name": "Data Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://zeniai.chargebee.com/api/v2/invoices",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "sort_by[asc]",
+              "value": "updated_at"
+            },
+            {
+              "name": "updated_at[after]",
+              "value": "={{ $json.formattedDate }}"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "offset",
+                    "value": "={{ $response.body.next_offset }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ $response.body.next_offset === $request.qs.offset }}",
+              "requestInterval": 1000
+            }
+          }
+        }
+      },
+      "id": "500bdd79-c53d-4d58-9344-bc6bbc4bfb4c",
+      "name": "Get Invoices",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        740,
+        660
+      ],
+      "alwaysOutputData": false,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "RR9kp6gtZl8lg187",
+          "name": "Chargebee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "list",
+        "options": {}
+      },
+      "id": "6aecb5b1-a1c3-4830-821d-f9fc60fe7c2d",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "685cdab2-a38d-48f8-b58c-76b08a696f38",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1340,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/2-37766506",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\" : {\n  \"invoice_number\": {{ $('Set Data').item.json.id }},\n  \"customer_id\": \"{{ $('Set Data').item.json.cid }}\",\n  \"subscription_id\": \"{{ $('Set Data').item.json.sid }}\",\n  \"status\": \"{{ $('Set Data').item.json.status }}\",\n  \"recurring\": \"{{ $('Set Data').item.json.recurring }}\",\n  \"amount_due\": {{ $('Set Data').item.json.due }},\n  \"amount_total\": {{ $('Set Data').item.json.amount }},\n  \"amount_paid\": {{ $('Set Data').item.json.paid }},\n  \"amount_adjusted\": {{ $('Set Data').item.json.adjustment }},\n  \"amount_write_off\": {{ $('Set Data').item.json.writeoff }},\n  \"credits_applied\": {{ $('Set Data').item.json.credits }},\n  \"first_invoice\": \"{{ $('Set Data').item.json.first_invoice }}\",\n  \"tax\": {{ $('Set Data').item.json.tax }},\n  \"first_name\": \"{{ $('Set Data').item.json.firstName }}\",\n  \"last_name\": \"{{ $('Set Data').item.json.lastName }}\",\n  \"company\": \"{{ $('Set Data').item.json.companyName }}\",\n  \"due_date\": {{ $('Set Data').item.json.due_date }},\n  \"invoice_date\": {{ $('Set Data').item.json.invoice_date }},\n  \"net_term_days\": {{ $('Set Data').item.json.net_term_days }}\n  }\n}",
+        "options": {}
+      },
+      "id": "afeea761-882b-4786-9f19-618f3f8a665c",
+      "name": "Create Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2340,
+        880
+      ],
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "XAN2EAun4Xi7kKU6",
+          "name": "Krunal: HubSpot Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e3f374-bd48-4c71-9282-6063e113eb34",
+              "leftValue": "={{ $json.total }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "00b98981-3e02-467d-ad65-13cbfc64e6cb",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2080,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/2-37766506/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filterGroups\":[{\"filters\":[{\"propertyName\":\"invoice_number\",\"value\":\"{{ $json.id }}\",\"operator\":\"EQ\"}]}]\n}",
+        "options": {}
+      },
+      "id": "1fe0e50c-36ab-40d3-83d1-b76b5f017956",
+      "name": "Check Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1860,
+        700
+      ],
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "XAN2EAun4Xi7kKU6",
+          "name": "Krunal: HubSpot Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/2-37766506/{{ $json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\" : {\n  \"invoice_number\": {{ $('Set Data').item.json.id }},\n  \"customer_id\": \"{{ $('Set Data').item.json.cid }}\",\n  \"subscription_id\": \"{{ $('Set Data').item.json.sid }}\",\n  \"status\": \"{{ $('Set Data').item.json.status }}\",\n  \"recurring\": \"{{ $('Set Data').item.json.recurring }}\",\n  \"amount_due\": {{ $('Set Data').item.json.due }},\n  \"amount_total\": {{ $('Set Data').item.json.amount }},\n  \"amount_paid\": {{ $('Set Data').item.json.paid }},\n  \"amount_adjusted\": {{ $('Set Data').item.json.adjustment }},\n  \"amount_write_off\": {{ $('Set Data').item.json.writeoff }},\n  \"credits_applied\": {{ $('Set Data').item.json.credits }},\n  \"first_invoice\": \"{{ $('Set Data').item.json.first_invoice }}\",\n  \"tax\": {{ $('Set Data').item.json.tax }},\n  \"first_name\": \"{{ $('Set Data').item.json.firstName }}\",\n  \"last_name\": \"{{ $('Set Data').item.json.lastName }}\",\n  \"company\": \"{{ $('Set Data').item.json.companyName }}\",\n  \"due_date\": {{ $('Set Data').item.json.due_date }},\n  \"invoice_date\": {{ $('Set Data').item.json.invoice_date }},\n  \"net_term_days\": {{ $('Set Data').item.json.net_term_days }}\n  }\n}",
+        "options": {}
+      },
+      "id": "f400adb7-30a2-483b-906e-82037ca9a6cd",
+      "name": "Update Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2340,
+        460
+      ],
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "XAN2EAun4Xi7kKU6",
+          "name": "Krunal: HubSpot Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ec9dccda-4c55-4ce9-b6c9-a1f69c8c6f4a",
+              "name": "id",
+              "value": "={{ $json.invoice.id }}",
+              "type": "string"
+            },
+            {
+              "id": "1ea23f2e-a2c6-473f-a917-10f2a5b0bca7",
+              "name": "cid",
+              "value": "={{ $json.invoice.customer_id }}",
+              "type": "string"
+            },
+            {
+              "id": "1739ece3-dc66-4f54-90c9-e23d8817ae13",
+              "name": "sid",
+              "value": "={{ $json.invoice.subscription_id }}",
+              "type": "string"
+            },
+            {
+              "id": "2b852a78-d451-41a2-87d5-cd8640e85382",
+              "name": "recurring",
+              "value": "={{ $json.invoice.recurring }}",
+              "type": "boolean"
+            },
+            {
+              "id": "19ed8bd5-b95e-419a-9a07-5da8bc00afbd",
+              "name": "status",
+              "value": "={{ $json.invoice.status }}",
+              "type": "string"
+            },
+            {
+              "id": "118feb8a-2d9e-40a0-82e9-d1927bde237b",
+              "name": "due",
+              "value": "={{ $json.invoice.amount_due / 100 }}",
+              "type": "number"
+            },
+            {
+              "id": "4b9f596b-2675-48a4-a5fc-b61888c83922",
+              "name": "amount",
+              "value": "={{ $json.invoice.total / 100}}",
+              "type": "string"
+            },
+            {
+              "id": "831237e0-fba9-485a-8047-5cfbe6886f25",
+              "name": "paid",
+              "value": "={{ $json.invoice.amount_paid /100 }}",
+              "type": "number"
+            },
+            {
+              "id": "07a1ec99-50d4-4716-b8b5-69879128861d",
+              "name": "adjustment",
+              "value": "={{ $json.invoice.amount_adjusted / 100 }}",
+              "type": "number"
+            },
+            {
+              "id": "54ff9b37-529b-48ee-85fa-b798439b9fb2",
+              "name": "writeoff",
+              "value": "={{ $json.invoice.write_off_amount /100 }}",
+              "type": "number"
+            },
+            {
+              "id": "0a7147bc-635b-41aa-8982-a55c82fce088",
+              "name": "credits",
+              "value": "={{ $json.invoice.credits_applied / 100 }}",
+              "type": "number"
+            },
+            {
+              "id": "06b1b5ed-dbd8-43c5-9ce4-5e2561bc0bea",
+              "name": "first_invoice",
+              "value": "={{ $json.invoice.first_invoice }}",
+              "type": "boolean"
+            },
+            {
+              "id": "3f24cec5-92cd-41ca-887e-ac8ec031a961",
+              "name": "tax",
+              "value": "={{ $json.invoice.tax / 100 }}",
+              "type": "number"
+            },
+            {
+              "id": "6068b691-651f-42e1-b62b-b1f106e652ae",
+              "name": "firstName",
+              "value": "={{ $json.invoice.billing_address.first_name }}",
+              "type": "string"
+            },
+            {
+              "id": "bbb74292-ec77-4624-a22b-16c6bb74f440",
+              "name": "lastName",
+              "value": "={{ $json.invoice.billing_address.last_name }}",
+              "type": "string"
+            },
+            {
+              "id": "f7c126e5-cb6c-40e0-b941-422e8b5c1326",
+              "name": "companyName",
+              "value": "={{ $json.invoice.billing_address.company }}",
+              "type": "string"
+            },
+            {
+              "id": "4a51a423-3fa3-4ebb-ad00-4beab06884fa",
+              "name": "due_date",
+              "value": "={{ $json.invoice.due_date * 1000 }}",
+              "type": "number"
+            },
+            {
+              "id": "ecdfe025-a5b3-4cc5-b0f9-b417b3357b05",
+              "name": "invoice_date",
+              "value": "={{ $json.invoice.date * 1000 }}",
+              "type": "number"
+            },
+            {
+              "id": "b646cce7-2bd4-4d4b-a900-3f68e7c8b56a",
+              "name": "net_term_days",
+              "value": "={{ $json.invoice.net_term_days }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "47186f9e-4f91-4e5e-bd90-651328529203",
+      "name": "Set Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        700
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "10bb5b6a-747a-4f96-93b8-46a7b7fd7e0d",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        60,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "0bbb2aac-cf3c-4755-8579-f0091a98af7c",
+      "name": "Update Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2560,
+        460
+      ],
+      "webhookId": "20666a1e-5f04-4ce9-acc8-7f972f35d69a"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "70112bc3-66da-4095-8621-574d3f17560c",
+      "name": "Create Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2560,
+        880
+      ],
+      "webhookId": "ba537926-3476-46e5-95aa-109b91f8d837"
+    },
+    {
+      "parameters": {
+        "operation": "subtractFromDate",
+        "magnitude": "={{ $json.today }}",
+        "duration": 1,
+        "outputFieldName": "timeframe",
+        "options": {
+          "includeInputFields": true
+        }
+      },
+      "id": "f453d937-4d3e-4939-b73b-139a9e3d13ab",
+      "name": "Adjust Date",
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        400,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $json.timeframe }}",
+        "format": "X",
+        "options": {}
+      },
+      "id": "c23dfbd3-61a6-4701-86de-da86a2eb59c9",
+      "name": "Timestamp Conversion",
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        560,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "includeTime": false,
+        "outputFieldName": "today",
+        "options": {
+          "timezone": "America/Los_Angeles"
+        }
+      },
+      "id": "306c7cc2-f1d4-4f7d-b6f1-f5daf07d79a7",
+      "name": "Get Today Date",
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        240,
+        660
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Invoices": {
+      "main": [
+        [
+          {
+            "node": "Data Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Exists?": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Set Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Update Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Invoice": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Data": {
+      "main": [
+        [
+          {
+            "node": "Check Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Invoice": {
+      "main": [
+        [
+          {
+            "node": "Create Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Invoice": {
+      "main": [
+        [
+          {
+            "node": "Update Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Get Today Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adjust Date": {
+      "main": [
+        [
+          {
+            "node": "Timestamp Conversion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timestamp Conversion": {
+      "main": [
+        [
+          {
+            "node": "Get Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Today Date": {
+      "main": [
+        [
+          {
+            "node": "Adjust Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "saveExecutionProgress": true
+  },
+  "versionId": "1fcb569d-0d2a-41a4-8d9b-4271f17bdb67",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f35844c20bd7f8456f907e3b5a901af1cf08cec7fee985138953357fd244e5bd"
+  },
+  "id": "OMT0j6AUiwW3IvE8",
+  "tags": []
+}
