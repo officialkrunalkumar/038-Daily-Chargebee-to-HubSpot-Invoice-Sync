@@ -1,5 +1,5 @@
 {
-  "name": "Daily Chargebee Invoices Sync to HubSpot",
+  "name": "Daily Chargebee Invoices to HubSpot Sync",
   "nodes": [
     {
       "parameters": {
@@ -31,7 +31,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        900,
+        1060,
         660
       ]
     },
@@ -80,7 +80,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        740,
+        820,
         660
       ],
       "alwaysOutputData": false,
@@ -101,7 +101,7 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        1120,
+        1340,
         660
       ]
     },
@@ -114,7 +114,7 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        1340,
+        1560,
         660
       ]
     },
@@ -134,7 +134,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2340,
+        2560,
         880
       ],
       "credentials": {
@@ -174,7 +174,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2080,
+        2300,
         700
       ]
     },
@@ -194,7 +194,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1860,
+        2080,
         700
       ],
       "credentials": {
@@ -220,7 +220,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2340,
+        2560,
         460
       ],
       "credentials": {
@@ -357,48 +357,54 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1600,
+        1820,
         700
       ]
     },
     {
-      "parameters": {},
-      "id": "10bb5b6a-747a-4f96-93b8-46a7b7fd7e0d",
-      "name": "Start",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        60,
-        660
-      ]
-    },
-    {
       "parameters": {
-        "amount": 1
+        "amount": 0.2
       },
       "id": "0bbb2aac-cf3c-4755-8579-f0091a98af7c",
       "name": "Update Wait",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2560,
+        2780,
         460
       ],
       "webhookId": "20666a1e-5f04-4ce9-acc8-7f972f35d69a"
     },
     {
       "parameters": {
-        "amount": 1
+        "amount": 0.2
       },
       "id": "70112bc3-66da-4095-8621-574d3f17560c",
       "name": "Create Wait",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2560,
+        2780,
         880
       ],
       "webhookId": "ba537926-3476-46e5-95aa-109b91f8d837"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "id": "6111eade-4c10-46f8-9112-308983cfb9a3",
+      "name": "Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        660
+      ]
     },
     {
       "parameters": {
@@ -406,32 +412,14 @@
         "magnitude": "={{ $json.today }}",
         "duration": 1,
         "outputFieldName": "timeframe",
-        "options": {
-          "includeInputFields": true
-        }
-      },
-      "id": "f453d937-4d3e-4939-b73b-139a9e3d13ab",
-      "name": "Adjust Date",
-      "type": "n8n-nodes-base.dateTime",
-      "typeVersion": 2,
-      "position": [
-        400,
-        660
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "formatDate",
-        "date": "={{ $json.timeframe }}",
-        "format": "X",
         "options": {}
       },
-      "id": "c23dfbd3-61a6-4701-86de-da86a2eb59c9",
-      "name": "Timestamp Conversion",
+      "id": "202ba2df-7352-41b0-954b-4753c6522215",
+      "name": "Yesterday",
       "type": "n8n-nodes-base.dateTime",
       "typeVersion": 2,
       "position": [
-        560,
+        320,
         660
       ]
     },
@@ -444,11 +432,27 @@
         }
       },
       "id": "306c7cc2-f1d4-4f7d-b6f1-f5daf07d79a7",
-      "name": "Get Today Date",
+      "name": "Today",
       "type": "n8n-nodes-base.dateTime",
       "typeVersion": 2,
       "position": [
-        240,
+        80,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $json.timeframe }}",
+        "format": "X",
+        "options": {}
+      },
+      "id": "c23dfbd3-61a6-4701-86de-da86a2eb59c9",
+      "name": "Timestamp",
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        560,
         660
       ]
     }
@@ -562,17 +566,6 @@
         ]
       ]
     },
-    "Start": {
-      "main": [
-        [
-          {
-            "node": "Get Today Date",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Update Wait": {
       "main": [
         [
@@ -595,33 +588,44 @@
         ]
       ]
     },
-    "Adjust Date": {
+    "Daily": {
       "main": [
         [
           {
-            "node": "Timestamp Conversion",
+            "node": "Today",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Timestamp Conversion": {
+    "Yesterday": {
+      "main": [
+        [
+          {
+            "node": "Timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Today": {
+      "main": [
+        [
+          {
+            "node": "Yesterday",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timestamp": {
       "main": [
         [
           {
             "node": "Get Invoices",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Today Date": {
-      "main": [
-        [
-          {
-            "node": "Adjust Date",
             "type": "main",
             "index": 0
           }
@@ -633,9 +637,10 @@
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
-    "saveExecutionProgress": true
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
   },
-  "versionId": "1fcb569d-0d2a-41a4-8d9b-4271f17bdb67",
+  "versionId": "1e1bf012-e551-4ef8-b01d-ea089fe1291b",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "f35844c20bd7f8456f907e3b5a901af1cf08cec7fee985138953357fd244e5bd"
